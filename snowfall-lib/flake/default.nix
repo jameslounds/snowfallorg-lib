@@ -4,7 +4,18 @@
   snowfall-lib,
   snowfall-config,
 }: let
-  inherit (core-inputs.nixpkgs.lib) assertMsg foldl filterAttrs const mapAttrs mapAttrs' hasSuffix removeSuffix nameValuePair;
+  inherit
+    (core-inputs.nixpkgs.lib)
+    assertMsg
+    foldl
+    filterAttrs
+    const
+    mapAttrs
+    mapAttrs'
+    hasSuffix
+    removeSuffix
+    nameValuePair
+    ;
 in rec {
   flake = rec {
     ## Remove the `self` attribute from an attribute set.
@@ -54,9 +65,7 @@ in rec {
     ## ```
     #@ Attrs -> Attrs
     without-snowfall-options = flake-options:
-      builtins.removeAttrs
-      flake-options
-      [
+      builtins.removeAttrs flake-options [
         "systems"
         "modules"
         "overlays"
@@ -85,12 +94,8 @@ in rec {
     #@ Attrs -> Attrs
     get-libs = attrs: let
       # @PERF(jakehamilton): Replace filter+map with a fold.
-      attrs-with-libs =
-        filterAttrs
-        (name: value: builtins.isAttrs (value.lib or null))
-        attrs;
-      libs =
-        builtins.mapAttrs (name: input: input.lib) attrs-with-libs;
+      attrs-with-libs = filterAttrs (name: value: builtins.isAttrs (value.lib or null)) attrs;
+      libs = builtins.mapAttrs (name: input: input.lib) attrs-with-libs;
     in
       libs;
   };
@@ -104,7 +109,11 @@ in rec {
       systems = full-flake-options.systems or {};
       homes = full-flake-options.homes or {};
     };
-    hosts = snowfall-lib.attrs.merge-shallow [(full-flake-options.systems.hosts or {}) systems homes];
+    hosts = snowfall-lib.attrs.merge-shallow [
+      (full-flake-options.systems.hosts or {})
+      systems
+      homes
+    ];
     templates = snowfall-lib.template.create-templates {
       overrides = full-flake-options.templates or {};
       alias = alias.templates or {};
@@ -131,9 +140,7 @@ in rec {
 
     outputs-builder = channels: let
       user-outputs-builder =
-        full-flake-options.outputs-builder
-        or full-flake-options.outputsBuilder
-        or (const {});
+        full-flake-options.outputs-builder or full-flake-options.outputsBuilder or (const {});
       user-outputs = user-outputs-builder channels;
       packages = snowfall-lib.package.create-packages {
         inherit channels namespace;
@@ -157,7 +164,10 @@ in rec {
         devShells = shells;
       };
     in
-      snowfall-lib.attrs.merge-deep [user-outputs outputs];
+      snowfall-lib.attrs.merge-deep [
+        user-outputs
+        outputs
+      ];
 
     flake-options =
       custom-flake-options
@@ -188,8 +198,7 @@ in rec {
         };
       };
 
-    flake-utils-plus-outputs =
-      core-inputs.flake-utils-plus.lib.mkFlake flake-options;
+    flake-utils-plus-outputs = core-inputs.flake-utils-plus.lib.mkFlake flake-options;
 
     flake-outputs =
       flake-utils-plus-outputs
@@ -199,17 +208,21 @@ in rec {
   in
     flake-outputs
     // {
-      packages =
-        flake-outputs.packages
+      legacyPackages =
+        (flake-outputs.legacyPackages or {})
         // (builtins.listToAttrs (
           builtins.map (system: {
             name = system;
             value =
-              flake-outputs.packages.${system}
+              (flake-outputs.legacyPackages.${system} or {})
               // {
                 homeConfigurations = let
                   homeNames = filterAttrs (_: home: home.system == system) homes;
-                  homeConfigurations = mapAttrs (home-name: _: flake-outputs.homeConfigurations.${home-name}) homeNames;
+                  homeConfigurations =
+                    mapAttrs (
+                      home-name: _: flake-outputs.homeConfigurations.${home-name}
+                    )
+                    homeNames;
                   renamedHomeConfigurations =
                     mapAttrs' (
                       name: value:
